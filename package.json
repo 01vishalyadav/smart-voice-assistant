@@ -1,0 +1,21 @@
+{
+  "name": "smart-voice-assistant",
+  "version": "1.0.0",
+  "description": "A smart voice assistant running on GPT",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "build": "export CI=false && cd client && npm install && npm run build"
+  },
+  "author": "Vishal Yadav",
+  "license": "ISC",
+  "dependencies": {
+    "@zoom/videosdk": "^1.7.10",
+    "@zoomus/websdk": "^2.13.0",
+    "config": "^3.3.9",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "http": "^0.0.1-security",
+    "jsrsasign": "^10.8.6"
+  }
+}
