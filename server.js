@@ -9,8 +9,6 @@ const app = express();
 const server = http.createServer(app);
 global.appRoot = path.resolve(__dirname);
 
-app.use(bodyParser.json(), cors())
-app.options('*', cors())
 // Static files
 app.use(express.static(path.resolve(__dirname, `${config.get('staticFilePath')}`)));
 
