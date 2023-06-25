@@ -1,0 +1,6 @@
+{
+    "delOutputFileAfter": "delete_output_file_after",
+    "openAI": {
+        "apiKey": "open_ai_api_key"
+    }
+}

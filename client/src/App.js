@@ -1,97 +1,74 @@
-import logo from './logo.svg';
 import './App.css';
-
-import Box from '@mui/material/Box';
-import TextField from '@mui/material/TextField';
-
+import React, { useState, useEffect } from 'react';
 import RecordRTC from 'recordrtc'
 import hark from 'hark'
+import axios from "axios";
 
-import React, {useState, useEffect} from 'react';
 
+// uses hark library to detect silence
+// uses recordrtc to record audio
 
 function App() {
-  var video;
-  var default_h1;
-  var h1
-  var recorder;
-
-  useEffect(() => {
-    h1 = document.querySelector('h1');
-    default_h1 = h1.innerHTML;
-    video = document.querySelector('video');
-
-    document.getElementById('btn-start-recording').onclick = function() {
-      this.disabled = true;
-      captureCamera(function(camera) {
-          video.muted = true;
-          video.srcObject = camera;
+  useEffect(()=>{
+    // having a bug in my front end code, due to which, page reloads in between
+    // adding following code to prevent unnecessary reloads.
+    window.onbeforeunload = function() {
+      return "Please don't leave the page";
+    }
+  }, [])
   
-          recorder = RecordRTC(camera, {
-              type: 'audio'
-          });
-  
-          recorder.startRecording();
-  
-          var max_seconds = 3;
-          var stopped_speaking_timeout;
-          var speechEvents = hark(camera, {});
-  
-          speechEvents.on('speaking', function() {
-              if(recorder.getBlob()) return;
-  
-              clearTimeout(stopped_speaking_timeout);
-  
-              if(recorder.getState() === 'paused') {
-                  // recorder.resumeRecording();
-              }
-              
-              h1.innerHTML = default_h1;
-          });
-  
-          speechEvents.on('stopped_speaking', function() {
-              if(recorder.getBlob()) return;
-              // use recorder.getBlob to get media stream
-  
-              // recorder.pauseRecording();
-              stopped_speaking_timeout = setTimeout(function() {
-                  document.getElementById('btn-stop-recording').click();
-                  h1.innerHTML = 'Recording is now stopped.';
-              }, max_seconds * 1000);
-  
-              
-              // just for logging purpose (you ca remove below code)
-              var seconds = max_seconds;
-              (function looper() {
-                  h1.innerHTML = 'Recording is going to be stopped in ' + seconds + ' seconds.';
-                  seconds--;
-  
-                  if(seconds <= 0) {
-                      h1.innerHTML = default_h1;
-                      return;
-                  }
-  
-                  setTimeout(looper, 1000);
-              })();
-          });
-  
-          // release camera on stopRecording
-          recorder.camera = camera;
-  
-          document.getElementById('btn-stop-recording').disabled = false;
+  function startButtonClickedHandler(e) {
+    e.preventDefault(); // to prevent form default relaod of the page
+    e.target.disabled = true; // disable until processing request
+    
+    const h2 = document.querySelector('h2');
+    const default_h1 = 'Listening...'
+    captureAudio(audioStream => {
+      // create recorder object of RecordRTC to record audio
+      const recorder = RecordRTC(audioStream, {
+        type: 'audio'
       });
-    };
-    document.getElementById('btn-stop-recording').onclick = function() {
-      this.disabled = true;
-      recorder.stopRecording(stopRecordingCallback);
-  };
-  }, []);
-    
-    
 
-    
+      recorder.startRecording();
+      let secondsForSilence = 3;
+      let stoppedSpeakingTimeout;
 
-  function captureCamera(callback) {
+      // usse hark library to create events based on 'silence'
+      let speechEvents = hark(audioStream, {});
+      speechEvents.on('speaking', function() {
+        if(recorder.getBlob()) return;
+        clearTimeout(stoppedSpeakingTimeout);
+        h2.innerHTML = 'I\'m listening, you are speaking :)';
+      });
+
+      // After user stops speaking for 3 seconds, send request to backend
+      speechEvents.on('stopped_speaking', () => {
+        if(recorder.getBlob()){
+          return;
+        }
+        stoppedSpeakingTimeout = setTimeout(function() {
+          stopRecording(recorder)
+          h2.innerHTML = 'Processing your audio and getting response';
+        }, secondsForSilence * 1000);
+
+        var seconds = secondsForSilence;
+        (function looper() {
+          h2.innerHTML = 'To stop listening in ' + seconds + ' seconds.';
+          seconds--;
+          if( seconds < 0) {
+            h2.innerHTML = 'Processing your audio and getting response';
+            return;
+          }
+          setTimeout(looper, 1000);
+        })();
+      });
+      recorder.camera = audioStream;
+    });
+  }
+
+
+  // function to capture audio from the user, as input
+  function captureAudio(callback) {
     navigator.mediaDevices.getUserMedia({ audio: true }).then(function(camera) {
       callback(camera);
     }).catch(function(error) {
@@ -100,26 +77,60 @@ function App() {
     });
   }
 
-  function stopRecordingCallback() {
-    video.srcObject = null;
-    var blob = recorder.getBlob();
-    video.src = URL.createObjectURL(blob);
 
-    recorder.camera.stop();
-    video.muted = false;
+  // function to stop recording and handling request and response to server
+  function stopRecording(recorder) {
+    recorder.stopRecording(()=> {
+      // convert recorded audio into blob
+      var blob = recorder.getBlob();
+      recorder.camera.stop();
+      // create form and send file in form to backend
+      const FormData = require('form-data');
+      let data = new FormData();
+      // create file from blob object and send it to backend
+      const audioInputFile = new File([blob], 'audioInputFile.webm', { type: blob.type })
+      data.append('audioInputFile', audioInputFile);
+      let config = {
+        method: 'post',
+        maxBodyLength: Infinity,
+        url: '/api/voiceAssistant/assist',
+        headers: { 
+          ...data.getHeaders
+        },
+        data : data
+      };
+      // make request using having config
+      axios.request(config)
+      .then((response) => {
+        const outputAudio = document.getElementById('out');
+        outputAudio.src = response.data.audioOutputFilePath;
+        outputAudio.muted = false;
+        console.log('audio output tag:', outputAudio);
+      })
+      .catch((error) => {
+        console.log(error);
+      });
+    })
+  };
+  function outputAudioEnded(e) {
+    document.querySelector('h2').innerHTML="Press button again to Speak";
+    document.querySelector('button').disabled=false;
   }
-
 
 
   return (
     <div className="App">
       <main>
-        <h2>Smart Voice Assistant</h2>
-
-        <h1>Auto Stop RecordRTC on Silence</h1>
-        <button id="btn-start-recording">Press before Speaking</button>
-        <button id="btn-stop-recording">Stop Recording</button>
-        <video controls autoPlay playsInline></video>
+        <h1>Smart Voice Assistant</h1>
+        <h2>Start speaking after pressing the below button, it will detect silence!</h2>
+        
+        <audio controls autoPlay id='out' onEnded={e=>outputAudioEnded(e)}></audio>
+        <br/>
+        <br/>
+        <br/>
+        <button onClick={(e)=>startButtonClickedHandler(e)}>Press before Speaking</button>
+        <br/>
+        
       </main>
     </div>
   );

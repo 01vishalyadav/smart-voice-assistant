@@ -10,12 +10,17 @@
   "author": "Vishal Yadav",
   "license": "ISC",
   "dependencies": {
+    "@google-cloud/text-to-speech": "^4.2.2",
     "@zoom/videosdk": "^1.7.10",
     "@zoomus/websdk": "^2.13.0",
     "config": "^3.3.9",
     "cors": "^2.8.5",
     "express": "^4.18.2",
     "http": "^0.0.1-security",
-    "jsrsasign": "^10.8.6"
+    "jsrsasign": "^10.8.6",
+    "multer": "^1.4.5-lts.1",
+    "node-gtts": "^2.0.2",
+    "openai": "^3.3.0",
+    "socket.io": "^4.7.0"
   }
 }

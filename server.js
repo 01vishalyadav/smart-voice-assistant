@@ -1,13 +1,13 @@
 const express = require('express');
 const http = require('http');
 const cors = require('cors');
-const path = require('path');
 const config = require('config')
-const KJUR = require('jsrsasign')
 const bodyParser = require('body-parser')
+const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
+global.appRoot = path.resolve(__dirname);
 
 app.use(bodyParser.json(), cors())
 app.options('*', cors())

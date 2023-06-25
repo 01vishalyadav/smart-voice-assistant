@@ -1,3 +1,4 @@
 {
-    "staticFilePath":"./client/public"
+    "staticFilePath":"./client/public",
+    "delOutputFileAfter": 15
 }
